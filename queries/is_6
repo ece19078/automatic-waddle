@@ -1,0 +1,45 @@
+CREATE QUERY is_6(STRING messageId) FOR GRAPH ldbc_snb_2 {
+    // Δημιουργεί ένα ερώτημα is_6, λαμβάνοντας ένα messageId ως είσοδο.
+    SumAccum<INT> @forumId;
+    // Ορίζει έναν συσσωρευτή για το id του forum.
+    SumAccum<STRING> @forumTitle;
+    // Ορίζει έναν συσσωρευτή για τον τίτλο του forum.
+    SetAccum<STRING> @@seed;
+    // Ορίζει ένα σύνολο (SetAccum) για το messageId.
+
+    @@seed += messageId;
+    // Προσθέτει το messageId στο σύνολο @@seed.
+    vMessage = to_vertex_set(@@seed, "Comment");
+    // Δημιουργεί ένα σύνολο κορυφών με τα σχόλια που έχουν το messageId.
+    IF vMessage.size() == 0 THEN
+        // Αν δεν υπάρχουν σχόλια με το messageId.
+        vMessage = to_vertex_set(@@seed, "Post");
+        // Δημιουργεί ένα σύνολο κορυφών με τα posts που έχουν το messageId.
+    END;
+
+    vModerator =
+        SELECT t3
+        FROM vMessage:s
+            -((Reply_Of>|Reply_Of>)*0..)-Post:t1
+            -(<Container_Of:e2)-Forum:t2
+            -(Has_Member>:e3)-Person:t3
+        ACCUM t3.@forumId = t2.id, t3.@forumTitle = t2.title;
+    // Βρίσκει τους moderators του forum όπου βρίσκεται το αρχικό Post.
+    // Αποθηκεύει το id και τον τίτλο του forum στους συσσωρευτές @forumId και @forumTitle του moderator.
+
+    PRINT vModerator[
+        vModerator.@forumId AS forumId,
+        vModerator.@forumTitle AS forumTitle,
+        vModerator.id AS moderatorId,
+        vModerator.first_name AS moderatorFirstName,
+        vModerator.last_name AS moderatorLastName];
+    // Εκτυπώνει τα στοιχεία των moderators.
+    PRINT vModerator.size() as Successful_Throughput;
+    // Εκτυπώνει τον αριθμό των moderators.
+    print vMessage.size()+vModerator.size() as Total_Nodes_Searched;
+    // Εκτυπώνει τον συνολικό αριθμό των κόμβων που έχουν αναζητηθεί.
+}
+// INSTALL QUERY is_6
+// RUN QUERY is_6(1236950581248)
+SET query_timeout = 180000
+INTERPRET QUERY is_6(1236950581248)
