@@ -1,0 +1,18 @@
+CREATE QUERY is_1() FOR GRAPH ldbc_snb_2 SYNTAX v2 {
+    SumAccum<int> @@cnt;
+    SumAccum<int> @@personCount = 0;
+    SumAccum<int> @@messageCount = 0;
+
+    F = SELECT t
+        FROM Person:s -(Likes>:e1)- :msg -(Has_Creator>)- Person:t
+        WHERE s.first_name == "Viktor" AND s.last_name == "Akhiezer"
+          AND t.last_name LIKE "S%"
+        ACCUM @@personCount += 2, @@messageCount += 1
+        POST-ACCUM @@cnt += 1;
+
+    PRINT @@cnt;
+    PRINT F.size();
+    PRINT @@personCount;
+    PRINT @@messageCount;
+  print @@messageCount+@@personCount as total;
+}
