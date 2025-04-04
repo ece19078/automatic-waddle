@@ -77,3 +77,5 @@ CREATE QUERY ic_1(VERTEX<Person> personId, STRING firstName) FOR GRAPH ldbc_snb_
     PRINT @@univInfo.size()+@@compInfo.size()+vFriend.size()+vPerson.size()+@@friendAll.size()+@@friendInfoTop.size()+@@univInfo.size() as Total_Nodes_Searched;
     //Εκτυπώνει το μέγεθος των κορυφών που αναζητήθηκαν.
 }
+//SET query_timeout = 180000
+//INTERPRET QUERY ic_1(30786325583618,"Carmen")
