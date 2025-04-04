@@ -1,0 +1,26 @@
+CREATE OR REPLACE QUERY ic_2(VERTEX<Person> personId, DATETIME maxDate) FOR GRAPH ldbc_snb_2 {
+    TYPEDEF TUPLE<INT personId, STRING personFirstName, STRING personLastName, INT messageId, STRING messageContent, DATETIME messageCreationDate> msg;
+    HeapAccum<msg>(20, messageCreationDate DESC, messageId ASC) @@msgTop;
+    SumAccum<INT> @@personCount = 0;
+    SumAccum<INT> @@messageCount = 0;
+    vPerson = { personId };
+    @@personCount += vPerson.size();
+    accPersonMessage =
+        SELECT s
+        FROM vPerson:s
+            -((Knows):e1)-Person:t1
+            -((<Has_Creator|<Has_Creator):e2)-(Comment|Post):t2
+        WHERE t2.creation_date < maxDate
+        ACCUM
+            CASE
+                WHEN t2.type == "Comment" OR t2.content != "" THEN
+                    @@msgTop += msg(t1.id, t1.first_name, t1.last_name, t2.id, t2.content, t2.creation_date)
+                ELSE
+                    @@msgTop += msg(t1.id, t1.first_name, t1.last_name, t2.id, t2.image_file, t2.creation_date)
+            END,
+            @@personCount += 1,
+            @@messageCount += 1;
+    PRINT @@msgTop.size();
+    PRINT @@personCount+@@messageCount +  @@msgTop.size() as totalNodes;
+    PRINT @@messageCount;
+}
