@@ -42,3 +42,7 @@ CREATE QUERY ic_11(VERTEX<Person> personId, STRING countryName, INT workFromYear
     PRINT @@countryCount;
     PRINT @@companyCount;
 }
+// INSTALL QUERY ic_11
+// RUN QUERY ic_11(30786325583618, "Laos", 2010)
+//SET query_timeout = 180000
+//INTERPRET QUERY ic_11(30786325583618, "Laos", 2010)
