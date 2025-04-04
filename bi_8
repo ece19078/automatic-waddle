@@ -43,3 +43,7 @@ CREATE QUERY bi_8(STRING tagName) FOR GRAPH ldbc_snb_2 {
     PRINT (accTopic.size()+vReply.size()+findValidReply.size()+vTag.size()+@@topicTop.size());
     // Εκτυπώνει τον συνολικό αριθμό των κόμβων που έχουν αναζητηθεί.
 }
+// INSTALL QUERY bi_8
+// RUN QUERY bi_8("Genghis_Khan")
+SET query_timeout = 180000
+INTERPRET QUERY bi_8("Genghis_Khan")
