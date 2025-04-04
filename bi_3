@@ -1,0 +1,47 @@
+CREATE QUERY bi_3(INT year1, INT month1) FOR GRAPH ldbc_snb_2 {
+    // Δημιουργεί ένα ερώτημα bi_3, λαμβάνοντας έτος και μήνα ως είσοδο.
+    TYPEDEF TUPLE <STRING tagName, INT countMonth1, INT countMonth2, INT diff> TAG_COUNT;
+    // Ορίζει έναν τύπο TUPLE για τα αποτελέσματα, με tagName, countMonth1, countMonth2 και diff.
+
+    GroupByAccum<STRING tagName, SumAccum<INT> countMonth1, SumAccum<INT> countMonth2> @@count;
+    // Ορίζει έναν συσσωρευτή GroupByAccum για να ομαδοποιήσει τα tags ανά όνομα και να μετρήσει τα μηνύματα ανά μήνα.
+    HeapAccum<TAG_COUNT>(100, diff DESC, tagName ASC) @@result;
+    // Ορίζει έναν σωρό (heap) συσσωρευτή για τα καλύτερα αποτελέσματα, ταξινομημένα κατά diff.
+
+    INT year2, month2;
+    // Ορίζει μεταβλητές για το δεύτερο έτος και μήνα.
+    year2 = year1 + (month1 / 12);
+    // Υπολογίζει το δεύτερο έτος.
+    month2 = 1 + month1 % 12;
+    // Υπολογίζει τον δεύτερο μήνα.
+
+    vMessages = { Post.*, Comment.* };
+    // Δημιουργεί ένα σύνολο κορυφών με όλα τα Post και Comment.
+    vMessages =
+        SELECT s
+        FROM vMessages:s
+        WHERE (year(s.creation_date) == year1 AND month(s.creation_date) == month1)
+            OR (year(s.creation_date) == year2 AND month(s.creation_date) == month2);
+    // Επιλέγει τα μηνύματα που δημιουργήθηκαν τον πρώτο ή τον δεύτερο μήνα.
+
+    vMessages =
+        SELECT s
+        FROM vMessages:s-(_>:e)-Tag:t
+        ACCUM
+            IF year(s.creation_date) == year1 AND month(s.creation_date) == month1 THEN
+                @@count += (t.name -> 1, 0)
+            ELSE
+                @@count += (t.name -> 0, 1)
+            END;
+    // Μετράει τα tags που χρησιμοποιήθηκαν σε μηνύματα, ξεχωριστά για τον πρώτο και τον δεύτερο μήνα.
+
+    FOREACH c IN @@count DO
+        @@result += TAG_COUNT(c.tagName, c.countMonth1, c.countMonth2, abs(c.countMonth1 - c.countMonth2));
+    END;
+    // Υπολογίζει τη διαφορά μεταξύ των μετρήσεων των tags για τους δύο μήνες και αποθηκεύει τα αποτελέσματα στον σωρό @@result.
+
+    PRINT @@result.size();
+    // Εκτυπώνει το μέγεθος των αποτελεσμάτων.
+    PRINT vMessages.size()+@@result.size()+@@count.size();
+    // Εκτυπώνει τον συνολικό αριθμό των κορυφών που έχουν αναζητηθεί.
+}
