@@ -1,0 +1,44 @@
+CREATE QUERY ic_11(VERTEX<Person> personId, STRING countryName, INT workFromYear) FOR GRAPH ldbc_snb_2 {
+    TYPEDEF TUPLE<INT personId, STRING personFirstName, STRING personLastName, STRING organizationName> friendInfo;
+    SetAccum<VERTEX<Person>> @@friendAll;
+    HeapAccum<friendInfo>(10, personId ASC, organizationName DESC) @@friendInfoTop;
+
+    SumAccum<INT> @@personCount = 0;
+    SumAccum<INT> @@countryCount = 0;
+    SumAccum<INT> @@companyCount = 0;
+
+    vPerson = { personId };
+    @@personCount += vPerson.size();
+
+    vFriend =
+        SELECT t
+        FROM vPerson:s-((Knows)*1..2)-Person:t
+        WHERE s != t
+        ACCUM @@friendAll += t, @@personCount += 1;
+
+    vCountry = { Country.* };
+    @@countryCount = vCountry.size();
+
+    accFriend =
+        SELECT s
+        FROM vCountry:s
+            -(<Is_Located_In:e1)-Company:t1
+            -(<Work_At:e2)-Person:t2
+        WHERE s.name == countryName
+            AND @@friendAll.contains(t2)
+        ACCUM @@friendInfoTop += friendInfo(t2.id, t2.first_name, t2.last_name, t1.name), @@companyCount += 1;
+
+   
+
+    INT totalFriendsProcessed = @@friendInfoTop.size();
+    FLOAT throughput = totalFriendsProcessed ;
+
+    PRINT @@friendInfoTop.size();
+    PRINT throughput;
+    PRINT (vCountry.size() + @@personCount + totalFriendsProcessed+@@companyCount+@@countryCount+accFriend.size()) ;
+    PRINT accFriend.size();
+
+    PRINT @@personCount;
+    PRINT @@countryCount;
+    PRINT @@companyCount;
+}
