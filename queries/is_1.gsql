@@ -16,3 +16,4 @@ CREATE QUERY is_1() FOR GRAPH ldbc_snb_2 SYNTAX v2 {
     PRINT @@messageCount;
   print @@messageCount+@@personCount as total;
 }
+//run query is_1()
