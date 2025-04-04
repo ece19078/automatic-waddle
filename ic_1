@@ -1,0 +1,79 @@
+CREATE QUERY ic_1(VERTEX<Person> personId, STRING firstName) FOR GRAPH ldbc_snb_2 {
+    // Δημιουργεί ένα ερώτημα ic_1, λαμβάνοντας ένα personId και ένα firstName ως είσοδο.
+    TYPEDEF TUPLE<VERTEX<Person> v, INT distanceFromPerson, STRING lastName, INT id> friendInfo;
+    // Ορίζει έναν τύπο TUPLE για τα στοιχεία των φίλων.
+    TYPEDEF TUPLE<STRING orgName, STRING orgPlace> org;
+  
+    HeapAccum<friendInfo>(20, distanceFromPerson ASC, lastName ASC, id ASC) @@friendInfoTop;
+    // Ορίζει έναν σωρό (heap) συσσωρευτή για τα καλύτερα αποτελέσματα, ταξινομημένα κατά απόσταση, επώνυμο και id.
+    SetAccum<VERTEX<Person>> @@friendAll;
+    // Ορίζει ένα σύνολο (SetAccum) για όλους τους φίλους που βρέθηκαν.
+    SetAccum<org> @comp, @univ;
+    // Ορίζει σύνολα για τις εταιρείες και τα πανεπιστήμια.
+    SumAccum<STRING> @cityName;
+    // Ορίζει έναν συσσωρευτή για τα ονόματα των πόλεων.
+    SumAccum<INT> @distance, @orgYear;
+    // Ορίζει συσσωρευτές για την απόσταση και το έτος ίδρυσης των οργανισμών.
+    MapAccum<INT, STRING> @@cityInfo;
+    // Ορίζει έναν χάρτη (MapAccum) για τα στοιχεία των πόλεων.
+    MapAccum<INT, SetAccum<org>> @@compInfo, @@univInfo;
+    // Ορίζει χάρτες για τα στοιχεία των εταιρειών και των πανεπιστημίων.
+    OrAccum @visited = False;
+    // Ορίζει έναν συσσωρευτή OrAccum για να ελέγχει αν ένα άτομο έχει επισκεφθεί.
+
+    INT i = 0;
+    // Ορίζει έναν μετρητή για την απόσταση.
+
+    vPerson = { personId };
+    // Δημιουργεί ένα σύνολο κορυφών με το άτομο που δόθηκε ως είσοδος.
+
+    WHILE i < 3 DO
+        // Επαναλαμβάνει μέχρι να βρεθούν φίλοι σε απόσταση 3.
+        vPerson =
+            SELECT t
+            FROM vPerson:s-((Knows):e)-Person:t
+            WHERE t.@visited == False
+            ACCUM
+                s.@visited += True,
+                t.@visited += True,
+                t.@distance += (i+1)
+            POST-ACCUM
+                CASE WHEN t.first_name == firstName THEN
+                    @@friendInfoTop += friendInfo(t, t.@distance, t.last_name, t.id)
+                END;
+        IF @@friendInfoTop.size() >= 20 THEN BREAK; END;
+        // Αν έχουν βρεθεί 20 φίλοι, σταματάει η επανάληψη.
+        i = i + 1;
+        // Αυξάνει τον μετρητή απόστασης.
+    END;
+
+    FOREACH f IN @@friendInfoTop DO
+        @@friendAll += f.v;
+    END;
+    // Προσθέτει όλους τους φίλους που βρέθηκαν στο σύνολο @@friendAll.
+
+    vFriend = { @@friendAll };
+    // Δημιουργεί ένα σύνολο κορυφών με όλους τους φίλους.
+
+    vFriend =
+        SELECT s
+        FROM vFriend:s
+            -((Work_At>|Study_At>):e1)-(Company|University):t1
+            -((Is_Located_In>|Is_Located_In>):e2)-(Country|City):t2
+        ACCUM
+            CASE
+                WHEN t1.type == "Company" THEN
+                    @@compInfo += (s.id -> org(t1.name, t2.name))
+                WHEN t1.type == "University" THEN
+                    @@univInfo += (s.id -> org(t1.name, t2.name))
+            END
+        POST-ACCUM
+            s.@cityName += @@cityInfo.get(s.id),
+            s.@univ += @@univInfo.get(s.id),
+            s.@comp += @@compInfo.get(s.id);
+ 
+    PRINT @@univInfo.size()+@@compInfo.size();
+    // Εκτυπώνει το throughput του ερωτήματος.
+    PRINT @@univInfo.size()+@@compInfo.size()+vFriend.size()+vPerson.size()+@@friendAll.size()+@@friendInfoTop.size()+@@univInfo.size() as Total_Nodes_Searched;
+    //Εκτυπώνει το μέγεθος των κορυφών που αναζητήθηκαν.
+}
