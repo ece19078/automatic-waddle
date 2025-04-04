@@ -45,3 +45,7 @@ CREATE QUERY bi_3(INT year1, INT month1) FOR GRAPH ldbc_snb_2 {
     PRINT vMessages.size()+@@result.size()+@@count.size();
     // Εκτυπώνει τον συνολικό αριθμό των κορυφών που έχουν αναζητηθεί.
 }
+// INSTALL QUERY bi_3
+// RUN QUERY bi_3(2010,10)
+SET query_timeout = 180000
+INTERPRET QUERY bi_3(2010,10)
