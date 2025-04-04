@@ -61,3 +61,6 @@ CREATE QUERY bi_10(STRING tagName, DATETIME minDate) FOR GRAPH ldbc_snb_2 {
     PRINT (accScore.size()+vPerson.size()+vPerson1.size()+vPerson2.size()+vTag.size());
     // Εκτυπώνει τον συνολικό αριθμό των κόμβων που έχουν αναζητηθεί σε όλο το ερώτημα.
 }
+
+// INSTALL QUERY bi_10
+INTERPRET QUERY bi_10("John_Rhys-Davies", "2012-01-22 00:00:00")
