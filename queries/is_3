@@ -1,0 +1,29 @@
+CREATE QUERY is_3(VERTEX<Person> personId) FOR GRAPH ldbc_snb_2 {
+    SumAccum<INT> @creationDate;
+
+    SumAccum<INT> @@personCount = 0;
+
+    vPerson = { personId };
+    @@personCount += vPerson.size();
+
+    vFriend =
+        SELECT t
+        FROM vPerson:s-((Knows):e)-Person:t
+        ACCUM t.@creationDate += DATETIME_TO_EPOCH(e.creation_date), @@personCount += 1
+        ORDER BY t.@creationDate DESC, t.id ASC;
+
+    PRINT vFriend[
+        vFriend.id AS personId,
+        vFriend.first_name AS firstName,
+        vFriend.last_name AS lastName,
+        EPOCH_TO_DATETIME(vFriend.@creationDate) AS friendshipCreationDate
+    ];
+    PRINT vFriend.size() + @@personCount AS total;
+    PRINT vFriend.size();
+
+    PRINT @@personCount;
+}
+//INSTALL QUERY is_3
+//RUN QUERY is_3(30786325583618)
+//SET query_timeout = 180000
+//INTERPRET QUERY is_3(30786325583618)
