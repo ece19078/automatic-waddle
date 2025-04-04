@@ -1,0 +1,60 @@
+CREATE QUERY is_7(STRING messageId) FOR GRAPH ldbc_snb_2 {
+    // Δημιουργεί ένα ερώτημα is_7, λαμβάνοντας ένα messageId ως είσοδο.
+    TYPEDEF TUPLE<INT commentId, STRING commentContent, DATETIME commentCreationDate, INT replyAuthorId, STRING replyAuthorFirstName, STRING replyAuthorLastName, BOOL replyAuthorKnowsOriginalMessageAuthor> reply;
+    // Ορίζει έναν τύπο TUPLE για τα αποτελέσματα.
+
+    SetAccum<STRING> @@seed;
+    // Ορίζει ένα σύνολο (SetAccum) για το messageId.
+    OrAccum @knows;
+    // Ορίζει έναν συσσωρευτή OrAccum για να ελέγχει αν ο δημιουργός της απάντησης γνωρίζει τον δημιουργό του αρχικού μηνύματος.
+    SumAccum<INT> @replyAuthorId;
+    // Ορίζει έναν συσσωρευτή για το id του δημιουργού της απάντησης.
+    SumAccum<STRING> @replyAuthorFirstName, @replyAuthorLastName;
+    // Ορίζει συσσωρευτές για τα ονόματα του δημιουργού της απάντησης.
+    HeapAccum<reply>(100, commentCreationDate DESC, replyAuthorId ASC) @@replyTop;
+    // Ορίζει έναν σωρό (heap) συσσωρευτή για τα καλύτερα αποτελέσματα, ταξινομημένα κατά ημερομηνία και id.
+
+    @@seed += messageId;
+    // Προσθέτει το messageId στο σύνολο @@seed.
+    vMessage = to_vertex_set(@@seed, "Comment");
+    // Δημιουργεί ένα σύνολο κορυφών με τα σχόλια που έχουν το messageId.
+    IF vMessage.size() == 0 THEN
+        // Αν δεν υπάρχουν σχόλια με το messageId.
+        vMessage = to_vertex_set(@@seed, "Post");
+        // Δημιουργεί ένα σύνολο κορυφών με τα posts που έχουν το messageId.
+    END;
+
+    accFriend =
+        SELECT s
+        FROM vMessage:s
+            -((Has_Creator>|Has_Creator>):e1)-Person:t1
+            -((Knows):e2)-Person:t2
+        ACCUM t2.@knows += True;
+    // Βρίσκει τους φίλους του δημιουργού του αρχικού μηνύματος.
+    // Ορίζει το @knows σε True για αυτούς τους φίλους.
+
+    accReply =
+        SELECT s
+        FROM vMessage:s
+            -((<Reply_Of|<Reply_Of):e1)-Comment:t1
+            -(Has_Creator>:e2)-Person:t2
+        ACCUM
+            t1.@replyAuthorId = t2.id,
+            t1.@replyAuthorFirstName = t2.first_name,
+            t1.@replyAuthorLastName = t2.last_name,
+            CASE WHEN t2.@knows THEN t1.@knows += True END
+        POST-ACCUM @@replyTop += reply(t1.id, t1.content, t1.creation_date, t1.@replyAuthorId, t1.@replyAuthorFirstName, t1.@replyAuthorLastName, t1.@knows);
+    // Βρίσκει τις απαντήσεις (comments) στο αρχικό μήνυμα και τους δημιουργούς τους.
+    // Αποθηκεύει τα αποτελέσματα στον σωρό @@replyTop.
+
+    PRINT @@replyTop;
+    // Εκτυπώνει τα αποτελέσματα.
+
+    print accFriend.size()+accReply.size()+vMessage.size()+@@replyTop.size() as Total_Nodes_Searched;
+    // Εκτυπώνει τον συνολικό αριθμό των κόμβων που έχουν αναζητηθεί.
+}
+
+// INSTALL QUERY is_7
+// RUN QUERY is_7(1236950581248)
+SET query_timeout = 180000
+INTERPRET QUERY is_7(1236950581248)
