@@ -51,3 +51,8 @@ CREATE QUERY bi_1(DATETIME maxDate) FOR GRAPH ldbc_snb_2 {
     PRINT @@result.size()+vStart.size() as total;
     // Εκτυπώνει τον συνολικό αριθμό των κόμβων που έχουν αναζητηθεί.
 }
+
+// INSTALL QUERY bi_1
+// RUN QUERY bi_1("2011-07-22 00:00:00")
+SET query_timeout = 180000
+INTERPRET QUERY bi_1("2011-07-22 00:00:00") 
