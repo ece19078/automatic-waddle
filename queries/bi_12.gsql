@@ -1,4 +1,4 @@
-CREATE QUERY bi_12(DATETIME minDate, INT likeThreshold) FOR GRAPH ldbc_snb_2 {
+eCREATE QUERY bi_12(DATETIME minDate, INT likeThreshold) FOR GRAPH ldbc_snb_2 {
     // Δημιουργεί ένα ερώτημα bi_12, λαμβάνοντας ελάχιστη ημερομηνία και όριο likes ως είσοδο.
     TYPEDEF TUPLE<INT messageId, DATETIME messageCreationDate, STRING creatorFirstName, STRING creatorLastName, INT likeCount> msg;
 
