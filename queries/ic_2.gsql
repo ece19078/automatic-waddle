@@ -24,3 +24,5 @@ CREATE OR REPLACE QUERY ic_2(VERTEX<Person> personId, DATETIME maxDate) FOR GRAP
     PRINT @@personCount+@@messageCount +  @@msgTop.size() as totalNodes;
     PRINT @@messageCount;
 }
+//SET query_timeout = 180000
+//INTERPRET QUERY ic_2(17592186052613,"2012-11-27T16:00:00")
